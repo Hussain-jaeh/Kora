@@ -1,0 +1,12 @@
+# Secrets — never commit these
+.env
+.env.local
+
+# Live WhatsApp session (linking these = anyone can send as the business)
+auth/
+
+# Dependencies & noise
+node_modules/
+.DS_Store
+*.log
+npm-debug.log*
