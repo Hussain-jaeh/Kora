@@ -76,3 +76,4 @@ real business. The API above is everything an inbox UI needs.
   etc. so the thread still reads correctly.
 - **Never commit `.env` or `auth/`.** `auth/` is a live WhatsApp session — anyone holding
   it can send messages as the business. Both are in `.gitignore`.
+# Kora
