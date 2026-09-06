@@ -16,8 +16,9 @@ import {
   createReminder,
   getPendingReminders,
   resolveReminder,
+  getBusiness,
 } from './db.js';
-import { sendMessage } from './socket.js';
+import { sendMessage, getConnectionState } from './socket.js';
 
 const app = express();
 app.use(cors());
@@ -36,6 +37,17 @@ app.use((req, res, next) => {
 // Wraps an async handler so a rejected promise reaches the error middleware.
 const route = (fn) => (req, res, next) => fn(req, res, next).catch(next);
 const notFound = (res) => res.status(404).json({ error: 'Not found' });
+
+// ── Status ─────────────────────────────────────────────────────────────────
+
+// Shop name for the header, and whether WhatsApp is actually linked. The
+// dashboard stops showing message counts as numbers when this says otherwise.
+app.get('/status', route(async (req, res) => {
+  res.json({
+    whatsapp: getConnectionState(),
+    business: await getBusiness(BUSINESS_ID),
+  });
+}));
 
 // ── Conversations ──────────────────────────────────────────────────────────
 

@@ -233,3 +233,12 @@ export async function getConversation(conversationId) {
   );
   return rows[0] || null;
 }
+
+/** The business this process serves. */
+export async function getBusiness(businessId) {
+  const { rows } = await pool.query(
+    `SELECT id, name, whatsapp_number, created_at FROM businesses WHERE id = $1`,
+    [businessId]
+  );
+  return rows[0] || null;
+}

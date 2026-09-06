@@ -13,6 +13,7 @@ const BUSINESS_ID = Number(process.env.BUSINESS_ID || 1);
 const logger = pino({ level: 'silent' });
 
 let sock;
+let connectionState = 'connecting'; // connecting | connected | reconnecting | disconnected
 
 export async function start() {
   const { state, saveCreds } = await useMultiFileAuthState('./auth');
@@ -38,9 +39,11 @@ export async function start() {
     if (connection === 'close') {
       const statusCode = new Boom(lastDisconnect?.error)?.output?.statusCode;
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+      connectionState = shouldReconnect ? 'reconnecting' : 'disconnected';
       console.log('Connection closed.', shouldReconnect ? 'Reconnecting...' : 'Logged out — delete ./auth and re-scan.');
       if (shouldReconnect) setTimeout(start, 3000);
     } else if (connection === 'open') {
+      connectionState = 'connected';
       console.log(`Connected. Listening for messages for business_id=${BUSINESS_ID}.`);
     }
   });
@@ -104,4 +107,9 @@ export async function sendMessage(phoneNumber, text, sentBy = 'owner') {
   });
 
   return result;
+}
+
+/** Whether the WhatsApp link is up — drives the dashboard's connection state. */
+export function getConnectionState() {
+  return connectionState;
 }

@@ -17,6 +17,9 @@ async function request(path, { method = 'GET', body } = {}) {
 }
 
 export const api = {
+  // Status — shop name + whether WhatsApp is linked
+  status: () => request('/status'),
+
   // Conversations
   conversations: () => request('/conversations'),
   messages: (id, limit = 50) => request(`/conversations/${id}/messages?limit=${limit}`),
