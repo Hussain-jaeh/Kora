@@ -1,33 +1,43 @@
-# WhatsApp Business OS — pilot scaffold
+# Kora
 
-Minimal pipe from a real WhatsApp number into Postgres, plus a REST API on top, so you
-can get one business live fast and add inbox UI / AI replies on top once messages are
-flowing.
+_WhatsApp Business OS — pilot scaffold_
+
+WhatsApp-first assistant and lightweight business OS for small physical
+businesses — barbers, tailors, phone shops, small restaurants, repair shops.
+
+```
+server/   WhatsApp socket + REST API + reminder scheduler  (Node, Postgres)
+web/      Owner dashboard                                   (React + Vite)
+```
 
 Uses [Baileys](https://github.com/WhiskeySockets/Baileys) (unofficial — drives a real
 WhatsApp Web session, no Meta approval needed). Fine for a paid pilot with a business
 that knows it's early; plan to move to the official Meta Cloud API before scaling past
 a handful of businesses, since the unofficial route risks the number getting banned.
 
-## Setup
+## Quick start
 
-1. `npm install`
-2. Have a Postgres database ready, copy `.env.example` to `.env` and set `DATABASE_URL`.
-3. `npm run migrate -- "Joe's Barbershop" 2348012345678` — creates the tables and one
-   business row. It prints a `BUSINESS_ID` — put that in `.env`. Safe to re-run.
-4. `npm start` — scan the QR code with the **business's** WhatsApp (Settings > Linked
-   Devices > Link a Device). The session is saved to `./auth/` so you only scan once.
+```bash
+npm run setup                                   # installs server/ and web/
+cp server/.env.example server/.env              # then set DATABASE_URL
+npm run migrate -- "Joe's Barbershop" 2348012345678
+                                                # prints BUSINESS_ID -> put in server/.env
+npm run server                                  # terminal 1 — WhatsApp + API on :3001
+npm run web                                     # terminal 2 — dashboard on :5173
+```
 
-`npm start` runs three things in one process: the WhatsApp socket, the REST API on
-`API_PORT`, and a reminder scheduler that ticks every minute.
+On first `npm run server`, scan the QR code with the **business's** WhatsApp
+(Settings > Linked Devices > Link a Device). The session is saved to `server/auth/`
+so you only scan once. `npm run migrate` is safe to re-run.
 
-Every inbound message from a real customer lands in the `messages` table, linked to a
-`customers` row keyed by phone number and a `conversations` row per customer. Duplicate
-replays from WhatsApp reconnects are rejected by a unique index on `wa_message_id`.
+Every inbound message lands in `messages`, linked to a `customers` row keyed by phone
+number and a `conversations` row per customer. Replays from WhatsApp reconnects are
+rejected by a unique index on `wa_message_id`.
 
 ## API
 
-Base URL `http://localhost:3001`. If `API_TOKEN` is set in `.env`, every request needs
+Base URL `http://localhost:3001`. The dashboard reaches it through Vite's `/api` proxy
+in development. If `API_TOKEN` is set in `server/.env`, every request needs
 `Authorization: Bearer <token>` — leave it blank locally, set it before this is ever
 reachable from a network.
 
@@ -47,7 +57,7 @@ reachable from a network.
 | POST | `/reminders` | `{ customer_id, due_at, reason, customer_message }` |
 | POST | `/reminders/:id/resolve` | Mark done |
 
-You can also call `sendMessage(phoneNumber, text, sentBy)` directly from `src/socket.js`.
+`web/src/api.js` wraps all of these — build screens against that, not raw `fetch`.
 
 ## Reminders: two different things
 
@@ -56,24 +66,27 @@ You can also call `sendMessage(phoneNumber, text, sentBy)` directly from `src/so
 - **`reason`** — an internal note for the owner ("hasn't responded in 3 days"). It is
   **never** sent to anybody.
 
-A reminder with no `customer_message` is an owner-facing nudge: it just stays in
+A reminder with no `customer_message` is an owner-facing nudge: it stays in
 `GET /reminders` until the owner deals with it. Nothing is auto-sent.
 
-## What's deliberately not built yet
+## Privacy
 
-No dashboard UI, no AI replies. Those come after messages are confirmed flowing for one
-real business. The API above is everything an inbox UI needs.
+Message bodies are stored in plaintext in Postgres, and this server is a linked
+WhatsApp device — meaning the operator can read customers' conversations. Before
+onboarding a real business: tell the owner what is stored and for how long, keep
+message bodies out of application logs, and set a retention window.
+
+## Not built yet
+
+AI-suggested replies, daily summaries, owner sign-in, multi-tenancy. The API above is
+everything the dashboard needs today.
 
 ## Notes for going from pilot to paid
 
-- One Baileys process per business number (this script is written for exactly that).
-  Running several businesses means several instances with different `.env` / `./auth`
-  folders — fine for a handful of pilots, but plan to consolidate onto the Cloud API
-  before this gets unwieldy.
-- Group chats are skipped in the inbound handler on purpose — uncomment that check if
-  a business wants group support later.
-- Media isn't downloaded yet; images/voice notes are stored as `[image]`, `[voice note]`
-  etc. so the thread still reads correctly.
-- **Never commit `.env` or `auth/`.** `auth/` is a live WhatsApp session — anyone holding
-  it can send messages as the business. Both are in `.gitignore`.
-# Kora
+- One Baileys process per business number. Several businesses means several instances
+  with different `.env` / `auth/` — fine for a few pilots, consolidate onto the Cloud
+  API before it gets unwieldy.
+- Group chats are skipped in the inbound handler on purpose.
+- Media isn't downloaded; images/voice notes are stored as `[image]`, `[voice note]`.
+- **Never commit `server/.env` or `server/auth/`.** `auth/` is a live WhatsApp session —
+  anyone holding it can send messages as the business. Both are gitignored.

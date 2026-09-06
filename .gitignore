@@ -2,11 +2,15 @@
 .env
 .env.local
 
-# Live WhatsApp session (linking these = anyone can send as the business)
+# Live WhatsApp session (leaking this = anyone can send as the business)
 auth/
 
-# Dependencies & noise
+# Dependencies & build output
 node_modules/
+dist/
+.vite/
+
+# Noise
 .DS_Store
 *.log
 npm-debug.log*
