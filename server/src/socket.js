@@ -112,7 +112,16 @@ export async function start() {
 
       const jid = msg.key.remoteJid;
       if (!jid) { console.log('[skip] message with no remoteJid'); continue; }
-      if (jid.endsWith('@g.us')) { console.log('[skip] group message'); continue; }
+
+      // Whitelist, not blacklist. WhatsApp delivers far more than customer
+      // messages down this socket: groups (@g.us), Status/story posts
+      // (status@broadcast), channels (@newsletter), broadcast lists. Status
+      // posts in particular are personal content from the owner's contacts —
+      // people with no relationship to the business — and storing them would
+      // both flood the inbox and put private posts in our database.
+      // Only one-to-one chats are customer conversations.
+      const isDirectChat = jid.endsWith('@s.whatsapp.net') || jid.endsWith('@lid');
+      if (!isDirectChat) { console.log(`[skip] not a direct chat: ${jid}`); continue; }
 
       // A message the owner sent themselves — typed in WhatsApp on their phone,
       // or sent by us. Owners reply from their phone all day, and dropping those
