@@ -19,9 +19,10 @@ const BUSINESS_ID = Number(process.env.BUSINESS_ID || 1);
 const logger = pino({ level: 'silent' });
 
 let sock;
-let connectionState = 'connecting';
+let connectionState = 'connecting'; // connecting | connected | reconnecting | disconnected
 let socketGeneration = 0;   // every socket gets a number; only the newest may act
-let starting = false; // connecting | connected | reconnecting | disconnected
+let starting = false;
+let reconnectAttempts = 0;  // backoff: reconnect storms churn the Signal session
 
 export async function start() {
   // Reconnecting used to call start() again without shutting the old socket
@@ -61,6 +62,12 @@ export async function start() {
       auth: auth.state,
       logger,
       printQRInTerminal: false,
+      // Leave the owner's phone as the "online" device — going online here
+      // diverts their notifications to this server.
+      markOnlineOnConnect: false,
+      // We keep our own history in Postgres; pulling WhatsApp's full archive on
+      // every connect is what makes these reconnects so heavy.
+      syncFullHistory: false,
     });
   } finally {
     starting = false;
@@ -86,9 +93,15 @@ export async function start() {
         `${lastDisconnect?.error ? ' (' + lastDisconnect.error.message + ')' : ''} — ` +
         (shouldReconnect ? 'reconnecting in 3s' : 'LOGGED OUT: delete server/auth and re-scan')
       );
-      if (shouldReconnect) setTimeout(() => start().catch((e) => console.error('[wa] restart failed:', e.message)), 3000);
+      if (shouldReconnect) {
+        const delay = Math.min(30000, 3000 * 2 ** reconnectAttempts);
+        reconnectAttempts += 1;
+        console.log(`[wa] reconnecting in ${delay / 1000}s (attempt ${reconnectAttempts})`);
+        setTimeout(() => start().catch((e) => console.error('[wa] restart failed:', e.message)), delay);
+      }
     } else if (connection === 'open') {
       connectionState = 'connected';
+      reconnectAttempts = 0;
       console.log(`[wa] socket #${generation} open — listening for business_id=${BUSINESS_ID}`);
     } else if (connection) {
       console.log(`[wa] socket #${generation}: ${connection}`);
@@ -98,12 +111,14 @@ export async function start() {
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     if (!isCurrent()) return;
     console.log(`[wa] messages.upsert: ${messages.length} message(s), type="${type}"`);
-    // Anything that is not a live delivery is a history/offline sync. We do not
-    // store those today, which means messages that arrived while this process
-    // was stopped are never captured. Say so out loud rather than dropping them
-    // in silence.
-    if (type !== 'notify') {
-      console.log(`[skip] ${messages.length} message(s) of type "${type}" — history sync, not stored`);
+    // 'notify' is a live delivery. 'append' is WhatsApp catching us up after a
+    // reconnect — real customer messages that arrived while we were away. This
+    // account reconnects often, so most traffic arrives as 'append'; dropping
+    // them meant a customer's message never appeared and nobody found out until
+    // they complained. Store both. The unique index on wa_message_id makes the
+    // inevitable replays free.
+    if (type !== 'notify' && type !== 'append') {
+      console.log(`[skip] ${messages.length} message(s) of type "${type}"`);
       return;
     }
 
