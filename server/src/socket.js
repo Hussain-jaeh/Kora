@@ -42,14 +42,17 @@ export async function start() {
   const generation = ++socketGeneration;
   const isCurrent = () => generation === socketGeneration;
 
+  let saveCreds;
   try {
-    const { state, saveCreds } = await useMultiFileAuthState('./auth');
+    const auth = await useMultiFileAuthState('./auth');
+    saveCreds = auth.saveCreds;
+
     const { version } = await fetchLatestBaileysVersion();
     console.log(`[wa] socket #${generation} starting on WhatsApp Web v${version.join('.')}`);
 
     sock = makeWASocket({
       version,
-      auth: state,
+      auth: auth.state,
       logger,
       printQRInTerminal: false,
     });
