@@ -13,26 +13,58 @@ const BUSINESS_ID = Number(process.env.BUSINESS_ID || 1);
 const logger = pino({ level: 'silent' });
 
 let sock;
-let connectionState = 'connecting'; // connecting | connected | reconnecting | disconnected
+let connectionState = 'connecting';
+let socketGeneration = 0;   // every socket gets a number; only the newest may act
+let starting = false; // connecting | connected | reconnecting | disconnected
 
 export async function start() {
-  const { state, saveCreds } = await useMultiFileAuthState('./auth');
-  const { version } = await fetchLatestBaileysVersion();
+  // Reconnecting used to call start() again without shutting the old socket
+  // down, so a session that dropped a few times ended up with several live
+  // sockets sharing one auth folder — fighting each other, and a stale one
+  // reporting "connected" while the real one was dead. One socket at a time.
+  if (starting) {
+    console.log('[wa] start() already running — ignoring duplicate call');
+    return;
+  }
+  starting = true;
 
-  sock = makeWASocket({
-    version,
-    auth: state,
-    logger,
-    printQRInTerminal: false,
-  });
+  if (sock) {
+    console.log('[wa] closing previous socket');
+    try {
+      sock.ev.removeAllListeners();
+      sock.end(undefined);
+    } catch (err) {
+      console.log('[wa] previous socket did not close cleanly:', err.message);
+    }
+    sock = undefined;
+  }
+
+  const generation = ++socketGeneration;
+  const isCurrent = () => generation === socketGeneration;
+
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState('./auth');
+    const { version } = await fetchLatestBaileysVersion();
+    console.log(`[wa] socket #${generation} starting on WhatsApp Web v${version.join('.')}`);
+
+    sock = makeWASocket({
+      version,
+      auth: state,
+      logger,
+      printQRInTerminal: false,
+    });
+  } finally {
+    starting = false;
+  }
 
   sock.ev.on('creds.update', saveCreds);
 
   sock.ev.on('connection.update', (update) => {
+    if (!isCurrent()) return; // a superseded socket must not touch shared state
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      console.log('\nScan this QR code in WhatsApp → Linked Devices:\n');
+      console.log('\n[wa] Scan this QR code in WhatsApp → Linked Devices:\n');
       qrcode.generate(qr, { small: true });
     }
 
@@ -40,15 +72,23 @@ export async function start() {
       const statusCode = new Boom(lastDisconnect?.error)?.output?.statusCode;
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
       connectionState = shouldReconnect ? 'reconnecting' : 'disconnected';
-      console.log('Connection closed.', shouldReconnect ? 'Reconnecting...' : 'Logged out — delete ./auth and re-scan.');
-      if (shouldReconnect) setTimeout(start, 3000);
+      console.log(
+        `[wa] socket #${generation} closed — status ${statusCode ?? 'unknown'}` +
+        `${lastDisconnect?.error ? ' (' + lastDisconnect.error.message + ')' : ''} — ` +
+        (shouldReconnect ? 'reconnecting in 3s' : 'LOGGED OUT: delete server/auth and re-scan')
+      );
+      if (shouldReconnect) setTimeout(() => start().catch((e) => console.error('[wa] restart failed:', e.message)), 3000);
     } else if (connection === 'open') {
       connectionState = 'connected';
-      console.log(`Connected. Listening for messages for business_id=${BUSINESS_ID}.`);
+      console.log(`[wa] socket #${generation} open — listening for business_id=${BUSINESS_ID}`);
+    } else if (connection) {
+      console.log(`[wa] socket #${generation}: ${connection}`);
     }
   });
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    if (!isCurrent()) return;
+    console.log(`[wa] messages.upsert: ${messages.length} message(s), type="${type}"`);
     // Anything that is not a live delivery is a history/offline sync. We do not
     // store those today, which means messages that arrived while this process
     // was stopped are never captured. Say so out loud rather than dropping them
