@@ -7,7 +7,13 @@ import makeWASocket, {
 import { Boom } from '@hapi/boom';
 import qrcode from 'qrcode-terminal';
 import pino from 'pino';
-import { upsertCustomer, upsertConversation, insertMessage, bumpUnread } from './db.js';
+import {
+  upsertCustomer,
+  upsertConversation,
+  insertMessage,
+  bumpUnread,
+  markConversationRead,
+} from './db.js';
 
 const BUSINESS_ID = Number(process.env.BUSINESS_ID || 1);
 const logger = pino({ level: 'silent' });
@@ -103,11 +109,17 @@ export async function start() {
 
     for (const msg of messages) {
       if (!msg.message) { console.log('[skip] message with no content'); continue; }
-      if (msg.key.fromMe) { console.log(`[skip] our own message to ${msg.key.remoteJid}`); continue; }
 
       const jid = msg.key.remoteJid;
       if (!jid) { console.log('[skip] message with no remoteJid'); continue; }
       if (jid.endsWith('@g.us')) { console.log('[skip] group message'); continue; }
+
+      // A message the owner sent themselves — typed in WhatsApp on their phone,
+      // or sent by us. Owners reply from their phone all day, and dropping those
+      // left the dashboard showing customers as still waiting for an answer they
+      // had already been given, and the AI drafting replies to settled questions.
+      // Store them as outbound, and treat them as the owner catching up.
+      const fromOwner = Boolean(msg.key.fromMe);
 
       const phoneNumber = jid.split('@')[0];
       const m = msg.message;
@@ -122,20 +134,30 @@ export async function start() {
         (m.documentMessage && '[document]') ||
         (m.locationMessage && '[location]') ||
         '[unsupported message type]';
-      const profileName = msg.pushName || null;
+      // pushName on an outbound message is the OWNER's name, not the customer's.
+      const profileName = fromOwner ? null : (msg.pushName || null);
 
       try {
         const customer = await upsertCustomer(BUSINESS_ID, phoneNumber, profileName, jid);
         const conversation = await upsertConversation(BUSINESS_ID, customer.id);
         const stored = await insertMessage(conversation.id, {
-          direction: 'inbound',
+          direction: fromOwner ? 'outbound' : 'inbound',
           body,
           waMessageId: msg.key.id,
-          sentBy: 'customer',
+          sentBy: fromOwner ? 'owner' : 'customer',
         });
         if (!stored) continue; // duplicate replay — already in the database
-        await bumpUnread(conversation.id);
-        console.log(`[in] ${profileName || phoneNumber} <${jid}> — ${body.length} chars`);
+
+        if (fromOwner) {
+          // They answered on their phone; nobody is waiting on this thread.
+          await markConversationRead(conversation.id);
+        } else {
+          await bumpUnread(conversation.id);
+        }
+
+        console.log(
+          `[${fromOwner ? 'out' : 'in'}] ${profileName || phoneNumber} <${jid}> — ${body.length} chars`
+        );
       } catch (err) {
         console.error('Failed to store inbound message:', err);
       }
