@@ -9,14 +9,16 @@ export const pool = new Pool({
 
 // ── Customers ──────────────────────────────────────────────────────────────
 
-export async function upsertCustomer(businessId, phoneNumber, name) {
+export async function upsertCustomer(businessId, phoneNumber, name, waJid = null) {
   const { rows } = await pool.query(
-    `INSERT INTO customers (business_id, phone_number, name)
-     VALUES ($1, $2, $3)
+    `INSERT INTO customers (business_id, phone_number, name, wa_jid)
+     VALUES ($1, $2, $3, $4)
      ON CONFLICT (business_id, phone_number)
-     DO UPDATE SET name = COALESCE(customers.name, EXCLUDED.name)
+     DO UPDATE SET
+       name   = COALESCE(customers.name, EXCLUDED.name),
+       wa_jid = COALESCE(EXCLUDED.wa_jid, customers.wa_jid)
      RETURNING *`,
-    [businessId, phoneNumber, name || null]
+    [businessId, phoneNumber, name || null, waJid]
   );
   return rows[0];
 }

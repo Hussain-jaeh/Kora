@@ -82,3 +82,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_wa_id
 
 CREATE INDEX IF NOT EXISTS idx_conversations_recent
   ON conversations(business_id, last_message_at DESC);
+
+-- The exact JID WhatsApp addresses this customer by. Newer WhatsApp identifies
+-- some contacts by a LID (e.g. 77666011095155@lid) rather than a phone number,
+-- and "<lid>@s.whatsapp.net" is not a deliverable address. Always reply to the
+-- JID we actually received from.
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS wa_jid TEXT;
