@@ -23,7 +23,7 @@ async function runReminderScheduler() {
     try {
       await sendMessage(reminder.customer_phone, reminder.customer_message, 'owner');
       await resolveReminder(reminder.id);
-      console.log(`[reminder] Sent to ${reminder.customer_phone}: ${reminder.customer_message}`);
+      console.log(`[reminder] #${reminder.id} sent to ${reminder.customer_phone} — ${reminder.customer_message.length} chars`);
     } catch (err) {
       console.error(`[reminder] #${reminder.id} failed, will retry next tick:`, err.message);
     }

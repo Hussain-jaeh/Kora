@@ -10,6 +10,7 @@ import ConversationList from './components/ConversationList.jsx';
 import Icon from './components/Icon.jsx';
 import Home from './screens/Home.jsx';
 import Reminders from './screens/Reminders.jsx';
+import Orders from './screens/Orders.jsx';
 import Inbox from './screens/Inbox.jsx';
 import Thread from './screens/Thread.jsx';
 
@@ -37,6 +38,7 @@ export default function App() {
       case 'reminders':
         return <Reminders conversations={rows} />;
       case 'orders':
+        return <Orders conversations={rows} />;
       case 'customers':
         return <NotBuiltYet name={section} />;
       default:
