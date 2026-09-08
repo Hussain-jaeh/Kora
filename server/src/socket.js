@@ -170,7 +170,12 @@ export async function start() {
           waMessageId: msg.key.id,
           sentBy: fromOwner ? 'owner' : 'customer',
         });
-        if (!stored) continue; // duplicate replay — already in the database
+        if (!stored) {
+          // Already stored — usually WhatsApp echoing back a message we just
+          // sent, or a replay after a reconnect. Say so; no silent paths.
+          console.log(`[dup] ${jid} — already stored, ignored`);
+          continue;
+        }
 
         if (fromOwner) {
           // They answered on their phone; nobody is waiting on this thread.
