@@ -9,6 +9,7 @@ import SideRail from './components/SideRail.jsx';
 import ConversationList from './components/ConversationList.jsx';
 import Icon from './components/Icon.jsx';
 import Home from './screens/Home.jsx';
+import Reminders from './screens/Reminders.jsx';
 import Inbox from './screens/Inbox.jsx';
 import Thread from './screens/Thread.jsx';
 
@@ -33,8 +34,9 @@ export default function App() {
 
   function screen() {
     switch (section) {
-      case 'orders':
       case 'reminders':
+        return <Reminders conversations={rows} />;
+      case 'orders':
       case 'customers':
         return <NotBuiltYet name={section} />;
       default:

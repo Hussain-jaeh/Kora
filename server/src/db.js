@@ -244,3 +244,26 @@ export async function getBusiness(businessId) {
   );
   return rows[0] || null;
 }
+
+/**
+ * Edit a pending reminder. Passing customerMessage explicitly as null turns an
+ * auto-send into a private nudge, so it is set apart from the omitted case.
+ */
+export async function updateReminder(reminderId, { reason, dueAt, customerMessage } = {}) {
+  const { rows } = await pool.query(
+    `UPDATE follow_up_reminders
+     SET reason           = COALESCE($2, reason),
+         due_at           = COALESCE($3, due_at),
+         customer_message = CASE WHEN $4::boolean THEN $5 ELSE customer_message END
+     WHERE id = $1
+     RETURNING *`,
+    [
+      reminderId,
+      reason ?? null,
+      dueAt ?? null,
+      customerMessage !== undefined,
+      customerMessage ?? null,
+    ]
+  );
+  return rows[0] || null;
+}

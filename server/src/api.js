@@ -16,6 +16,7 @@ import {
   createReminder,
   getPendingReminders,
   resolveReminder,
+  updateReminder,
   getBusiness,
 } from './db.js';
 import { sendMessage, getConnectionState } from './socket.js';
@@ -135,6 +136,18 @@ app.post('/reminders', route(async (req, res) => {
     customerMessage: customer_message || null,
   });
   res.status(201).json(reminder);
+}));
+
+// Edit a reminder — change the text that will be sent, or push the time back.
+// Sending customer_message: null converts an auto-send into a private nudge.
+app.patch('/reminders/:id', route(async (req, res) => {
+  const { reason, due_at, customer_message } = req.body;
+  const updated = await updateReminder(req.params.id, {
+    reason,
+    dueAt: due_at,
+    ...('customer_message' in req.body ? { customerMessage: customer_message } : {}),
+  });
+  updated ? res.json(updated) : notFound(res);
 }));
 
 app.post('/reminders/:id/resolve', route(async (req, res) => {

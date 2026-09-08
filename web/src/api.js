@@ -40,5 +40,6 @@ export const api = {
   // Reminders — customer_message is SENT to the customer; reason is internal only.
   reminders: () => request('/reminders'),
   createReminder: (reminder) => request('/reminders', { method: 'POST', body: reminder }),
+  updateReminder: (id, fields) => request(`/reminders/${id}`, { method: 'PATCH', body: fields }),
   resolveReminder: (id) => request(`/reminders/${id}/resolve`, { method: 'POST' }),
 };

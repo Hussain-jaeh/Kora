@@ -330,3 +330,89 @@ body { -webkit-font-smoothing: antialiased; }
   .suggestion-actions .btn-wide { width: auto; margin-top: 0; white-space: nowrap; }
   .suggestion-actions .suggestion-note { margin: 0 0 0 auto; text-align: right; }
 }
+
+/* ── Reminders ───────────────────────────────────────────────────────────── */
+/* The two kinds differ in ground, border, rule and actions all at once —
+   fill vs no fill, gold rule vs none, quoted message vs plain. Never one card
+   with a modifier: mixing them up texts a customer an internal note. */
+
+.reminders-scroll { padding: 14px 14px 6px; }
+.reminders-day { margin: 0 0 9px 2px; font-size: 11px; }
+.reminders-by-day section + section .reminders-day { margin-top: 16px; }
+
+.reminder { border-radius: var(--radius-md); padding: 13px 14px; margin-bottom: 12px; }
+
+.reminder-send {
+  border: 1px solid var(--color-divider);
+  border-left: 3px solid var(--color-accent-600);
+  background: var(--color-bg);
+}
+.reminder-private {
+  border: 1px solid var(--color-neutral-400);
+  background: var(--color-surface);
+}
+
+.reminder-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.reminder-time { font-size: 13px; color: var(--color-neutral-800); flex: none; }
+
+.reminder-tag-send {
+  font-size: 11.5px; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--color-accent-800); border-color: var(--color-accent-600);
+}
+.reminder-tag-private {
+  font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase;
+  display: inline-flex; gap: 5px; align-items: center;
+  border: 1px solid var(--color-neutral-400);
+}
+
+.reminder-to { font-size: 13px; color: var(--color-neutral-800); margin-top: 9px; }
+.reminder-quote {
+  border-left: 2px solid var(--color-accent-400);
+  padding-left: 11px; margin: 7px 0 0; font-size: 16px; line-height: 1.5;
+}
+.reminder-edit { margin-top: 8px; font-size: 15px; min-height: 74px; background: var(--color-bg); }
+.reminder-reason { font-size: 16.5px; line-height: 1.45; margin-top: 9px; }
+.reminder-note { font-size: 13px; color: var(--color-neutral-800); margin-top: 5px; }
+
+.reminder-actions { display: flex; gap: 8px; margin-top: 12px; }
+.reminder-actions .btn { flex: 1; min-height: 44px; font-size: 14px; }
+.reminder-actions .btn.on-bg { background: var(--color-bg); }
+
+.reminders-cta { padding: 0 14px 12px; flex: none; }
+.reminders-columns { display: none; }
+.reminders-column-empty { font-size: 14px; color: var(--color-neutral-700); margin: 0 0 12px 2px; }
+
+/* — new reminder dialog — */
+.reminder-dialog { background: var(--color-bg); max-height: 88vh; overflow-y: auto; }
+.kind-choice { display: flex; flex-direction: column; gap: 8px; }
+.kind-option {
+  display: flex; flex-direction: column; gap: 3px; text-align: left;
+  padding: 11px 13px; border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md); background: transparent; cursor: pointer; font: inherit;
+}
+.kind-option.is-on { border-color: var(--color-accent-700); background: var(--color-accent-100); }
+.kind-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-heading); font-weight: 600; font-size: 15.5px;
+}
+.kind-help { font-size: 13px; color: var(--color-neutral-800); }
+.kind-option.is-on .kind-help { color: var(--color-accent-800); }
+.reminder-dialog .field > span {
+  display: block; font-size: 12.5px; margin-bottom: 5px; color: var(--color-neutral-800);
+}
+.reminder-dialog .field { display: block; }
+.reminder-dialog .input { min-height: 44px; font-size: 15px; }
+.reminder-dialog textarea.input { min-height: 74px; }
+.reminder-dialog-note { font-size: 13px; color: var(--color-neutral-800); margin: 0; }
+.reminder-dialog-error { font-size: 13.5px; color: var(--color-accent-800); margin: 0; }
+.reminder-save { width: auto; min-height: 48px; font-size: 15px; padding-inline: 22px; }
+
+@media (min-width: 900px) {
+  /* Two labelled columns, so the difference is structural, not decorative. */
+  .reminders-by-day { display: none; }
+  .reminders-columns {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 28px; padding: 6px 14px 0;
+  }
+  .reminders-cta { padding: 12px 14px; max-width: 320px; }
+}

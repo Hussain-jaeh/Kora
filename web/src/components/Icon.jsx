@@ -11,6 +11,8 @@ const PATHS = {
   check: 'm5 12.5 4.5 4.5L19 7.5',
   warning: 'M12 4 21 19.5H3zM12 10v4.2M12 17.2h.01',
   signal: 'M2 12.5a13 13 0 0 1 20 0M6 16a8 8 0 0 1 12 0M12 20h.01',
+  lock: 'M6 11V8a6 6 0 1 1 12 0v3M4.5 11h15v10h-15z',
+  bell: 'M6 9.5a6 6 0 1 1 12 0c0 4.5 1.8 5.5 1.8 5.5H4.2S6 14 6 9.5M10 19a2 2 0 0 0 4 0',
 };
 
 export default function Icon({ name, size = 22, strokeWidth = 1.6, style }) {
