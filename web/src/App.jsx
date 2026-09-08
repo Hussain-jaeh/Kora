@@ -11,6 +11,7 @@ import Icon from './components/Icon.jsx';
 import Home from './screens/Home.jsx';
 import Reminders from './screens/Reminders.jsx';
 import Orders from './screens/Orders.jsx';
+import Customer, { Customers } from './screens/Customer.jsx';
 import Inbox from './screens/Inbox.jsx';
 import Thread from './screens/Thread.jsx';
 
@@ -40,7 +41,9 @@ export default function App() {
       case 'orders':
         return <Orders conversations={rows} />;
       case 'customers':
-        return <NotBuiltYet name={section} />;
+        return param
+          ? <Customer customerId={param} conversations={rows} />
+          : <Customers />;
       default:
         return <Home conversations={rows} orders={orders.data || []} shopName={shopName} />;
     }
@@ -118,18 +121,6 @@ function ChooseConversation() {
     <div className="screen">
       <div className="empty">
         <p className="empty-body">Choose a conversation</p>
-      </div>
-    </div>
-  );
-}
-
-function NotBuiltYet({ name }) {
-  return (
-    <div className="screen">
-      <div className="screen-header"><h2 style={{ textTransform: 'capitalize' }}>{name}</h2></div>
-      <div className="empty">
-        <div className="empty-title">Not built yet</div>
-        <p className="empty-body">This screen is designed but not implemented — it's next.</p>
       </div>
     </div>
   );
